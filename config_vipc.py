@@ -46,8 +46,8 @@ __C.NETWORK.shared_encoder.pc_h_hidden_dim       = 192
 #
 __C.TRAIN                                        = edict()
 __C.TRAIN.BATCH_SIZE                             = 8
-__C.TRAIN.N_EPOCHS                               = 160
-__C.TRAIN.SAVE_FREQ                              = 40
+__C.TRAIN.N_EPOCHS                               = 16
+__C.TRAIN.SAVE_FREQ                              = 1
 __C.TRAIN.LEARNING_RATE                          = 0.001
 __C.TRAIN.LR_MILESTONES                          = [16,32,48,64,80,96,112,128,144]
 __C.TRAIN.LR_DECAY_STEP                          = [16,32,48,64,80,96,112,128,144]
@@ -55,13 +55,13 @@ __C.TRAIN.WARMUP_STEPS                           = 1
 __C.TRAIN.GAMMA                                  = 0.7
 __C.TRAIN.BETAS                                  = (.9, .999)
 __C.TRAIN.WEIGHT_DECAY                           = 0
-__C.TRAIN.CATE                                   = 'all'
+__C.TRAIN.CATE                                   = 'lamp'
 __C.TRAIN.d_size                                 = 1
 #
 # Test
 #
 __C.TEST                                         = edict()
 __C.TEST.METRIC_NAME                             = 'ChamferDistance'
-__C.TEST.CATE                                    = 'plane'
+__C.TEST.CATE                                    = 'lamp'
 __C.TEST.BATCH_SIZE                              = 64
 #__C.CONST.WEIGHTS = os.path.join('/home/kshitij/kshitij/egiinet_dino','checkpoints/all-eight-ckpt-best.pth') #path to pre-trained checkpoints

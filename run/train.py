@@ -18,13 +18,30 @@ from torch.optim.lr_scheduler import *
 import os
 import sys
 from dotenv import load_dotenv
+from run import hub_uploader
+import wandb
+
 load_dotenv()
 shapenet_path = os.getenv("SHAPENET_DATASET_PATH")
 dino_path = os.getenv("DINO_PROJECT_PATH")
 def train_net(cfg):
     torch.backends.cudnn.benchmark = True
+    # Start a new wandb run to track this script.
+    run = wandb.init(
+        # Set the wandb entity where your project will be logged (generally your team name).
+        entity="kshitijkale1212",
+        # Set the wandb project where this run will be logged.
+        project="egiinet_clean",
+        # Track hyperparameters and run metadata.
+        config={
+            "learning_rate": 0.02,
+            "architecture": "egiinet_base",
+            "dataset": "shapenet_vipc_subset",
+            "epochs": 24,
+        },
+    )
 
-    ViPC_train = ViPCDataLoader(os.path.join(dino_path,'train_list.txt'),
+    ViPC_train = ViPCDataLoader(os.path.join(dino_path,'fummy.txt'),
                                  data_path=cfg.DATASETS.SHAPENET.VIPC_PATH, status='train',
                                 category=cfg.TRAIN.CATE)
     train_data_loader = DataLoader(ViPC_train,
@@ -145,29 +162,32 @@ def train_net(cfg):
                 '[Epoch %d/%d]  Losses = %s' %
                 (epoch_idx, cfg.TRAIN.N_EPOCHS,
                  ['%.4f' % l for l in [avg_cdc, avg_style, avg_loss]]))
-
+        run.log({"avg_cdc":avg_cdc,"avg_style":avg_style,"avg_loss":avg_loss,"epoch":epoch_idx,"learning_rate":optimizer.param_groups[0]['lr']})
+        
         # # Validate the current model
         # cd_eval = test_net(cfg, epoch_idx, val_data_loader, val_writer, model)
         # Save checkpoints
-        if epoch_idx % cfg.TRAIN.SAVE_FREQ == 0 or cd_eval < best_metrics:
-            if cd_eval < best_metrics:
-                best_metrics = cd_eval
-                BestEpoch = epoch_idx
-                file_name = 'ckpt-best.pth'
-
-            else:
-                file_name = 'ckpt-epoch-%03d.pth' % epoch_idx
+        if epoch_idx % cfg.TRAIN.SAVE_FREQ == 0:
+            file_name = 'ckpt-epoch-%03d.pth' % epoch_idx
             output_path = os.path.join(cfg.DIR.CHECKPOINTS, file_name)
             torch.save({
                 'model': model.state_dict(),
                 'optimizer': optimizer.state_dict()
             }, output_path)
-            upload_checkpoint_folder(
-                local_dir="checkpoints", 
-                repo_id="YourUsername/YourRepoName"
+            hub_uploader.upload_checkpoint_folder(
+                local_dir=cfg.DIR.CHECKPOINTS, 
+                repo_id="kshitij121212/shapenet_clean"
                 )
+            # artifact = wandb.Artifact(f"checkpoint-epoch-{epoch_idx:03d}", type="model")
+            # artifact.add_file(output_path)
+            # wandb.log_artifact(artifact)
+
+            # hub_uploader.upload_checkpoint_folder(
+            #     local_dir=cfg.DIR.LOGS, 
+            #     repo_id="kshitij121212/shapenet_clean"
+            #     )
             logging.info('Saved checkpoint to %s ...' % output_path)
         logging.info('Best Performance: Epoch %d -- CD %.4f' % (BestEpoch,best_metrics))
-
+    run.finish
     train_writer.close()
     val_writer.close()
