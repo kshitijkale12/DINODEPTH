@@ -15,13 +15,18 @@ from utils.average_meter import AverageMeter
 from utils.loss_utils import *
 from utils.schedular import GradualWarmupScheduler
 from torch.optim.lr_scheduler import *
-
+import os
+import sys
+from dotenv import load_dotenv
+load_dotenv()
+shapenet_path = os.getenv("SHAPENET_DATASET_PATH")
+dino_path = os.getenv("DINO_PROJECT_PATH")
 def train_net(cfg):
     torch.backends.cudnn.benchmark = True
 
-    ViPC_train = ViPCDataLoader(r'/project/EGIInet/train_list.txt',
+    ViPC_train = ViPCDataLoader(os.path.join(dino_path,'train_list.txt'),
                                  data_path=cfg.DATASETS.SHAPENET.VIPC_PATH, status='train',
-                                 view_align=False, category=cfg.TRAIN.CATE)
+                                category=cfg.TRAIN.CATE)
     train_data_loader = DataLoader(ViPC_train,
                               batch_size=cfg.TRAIN.BATCH_SIZE,
                               num_workers=cfg.CONST.NUM_WORKERS,
@@ -29,15 +34,15 @@ def train_net(cfg):
                               drop_last=True,
                               prefetch_factor=cfg.CONST.DATA_perfetch)
 
-    ViPC_test = ViPCDataLoader(r'/project/EGIInet/test_list.txt',
-                                data_path=cfg.DATASETS.SHAPENET.VIPC_PATH, status='test',
-                                view_align=False, category=cfg.TRAIN.CATE)
-    val_data_loader = DataLoader(ViPC_test,
-                                   batch_size=cfg.TRAIN.BATCH_SIZE,
-                                   num_workers=cfg.CONST.NUM_WORKERS,
-                                   shuffle=True,
-                                   drop_last=True,
-                                   prefetch_factor=cfg.CONST.DATA_perfetch)
+    # ViPC_test = ViPCDataLoader(os.path.join(dino_path,'test_list.txt'),
+    #                             data_path=cfg.DATASETS.SHAPENET.VIPC_PATH, status='test',
+    #                             view_align=False, category=cfg.TRAIN.CATE)
+    # val_data_loader = DataLoader(ViPC_test,
+    #                                batch_size=cfg.TRAIN.BATCH_SIZE,
+    #                                num_workers=cfg.CONST.NUM_WORKERS,
+    #                                shuffle=True,
+    #                                drop_last=True,
+    #                                prefetch_factor=cfg.CONST.DATA_perfetch)
 
     # Set up folders for logs and checkpoints
     output_dir = os.path.join(cfg.DIR.OUT_PATH, cfg.TRAIN.CATE, '%s', datetime.now().strftime('%y-%m-%d-%H-%M-%S'))
@@ -141,8 +146,8 @@ def train_net(cfg):
                 (epoch_idx, cfg.TRAIN.N_EPOCHS,
                  ['%.4f' % l for l in [avg_cdc, avg_style, avg_loss]]))
 
-        # Validate the current model
-        cd_eval = test_net(cfg, epoch_idx, val_data_loader, val_writer, model)
+        # # Validate the current model
+        # cd_eval = test_net(cfg, epoch_idx, val_data_loader, val_writer, model)
         # Save checkpoints
         if epoch_idx % cfg.TRAIN.SAVE_FREQ == 0 or cd_eval < best_metrics:
             if cd_eval < best_metrics:
@@ -157,7 +162,10 @@ def train_net(cfg):
                 'model': model.state_dict(),
                 'optimizer': optimizer.state_dict()
             }, output_path)
-
+            upload_checkpoint_folder(
+                local_dir="checkpoints", 
+                repo_id="YourUsername/YourRepoName"
+                )
             logging.info('Saved checkpoint to %s ...' % output_path)
         logging.info('Best Performance: Epoch %d -- CD %.4f' % (BestEpoch,best_metrics))
 

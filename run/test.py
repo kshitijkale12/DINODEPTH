@@ -10,7 +10,12 @@ from tqdm import tqdm
 from utils.ViPCdataloader import ViPCDataLoader
 from utils.average_meter import AverageMeter
 from utils.loss_utils import *
-
+import os
+import sys
+from dotenv import load_dotenv
+load_dotenv()
+shapenet_path = os.getenv("SHAPENET_DATASET_PATH")
+dino_path = os.getenv("DINO_PROJECT_PATH")
 
 def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, model=None):
     torch.backends.cudnn.benchmark = True
@@ -18,7 +23,7 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, model=N
     if test_data_loader is None:
         # Set up data loader
 
-        ViPC_test = ViPCDataLoader(r'/project/EGIInet/test_list.txt',
+        ViPC_test = ViPCDataLoader(os.path.join(dino_path,'test_list.txt'),
                                    data_path=cfg.DATASETS.SHAPENET.VIPC_PATH,
                                    status='test',
                                    view_align=False, category=cfg.TEST.CATE)

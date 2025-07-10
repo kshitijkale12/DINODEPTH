@@ -11,7 +11,6 @@ from run.test import test_net
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = cfg.CONST.DEVICE
 
-
 def set_seed(seed):
     np.random.seed(seed)
     torch.manual_seed(seed)
