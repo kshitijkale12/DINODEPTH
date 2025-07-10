@@ -174,6 +174,7 @@ def train_net(cfg):
                 'model': model.state_dict(),
                 'optimizer': optimizer.state_dict()
             }, output_path)
+            
             hub_uploader.upload_checkpoint_folder(
                 local_dir=cfg.DIR.CHECKPOINTS, 
                 repo_id="kshitij121212/shapenet_clean"

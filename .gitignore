@@ -2,4 +2,5 @@
 **/build
 **/dist
 **/*.egg-info
-**/project_logs
+/project_logs
+/wandb
