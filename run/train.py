@@ -118,14 +118,17 @@ def train_net(cfg):
         n_batches = len(train_data_loader)
         print('epoch: ', epoch_idx, 'optimizer: ', optimizer.param_groups[0]['lr'])
         with tqdm(train_data_loader) as t:
-            for batch_idx, (view,gt_pc,part_pc,) in enumerate(t):
+            for batch_idx, (view,gt_pc,part_pc,depth,) in enumerate(t):
 
                 partial = part_pc.cuda()#[16,2048,3]
                 gt = gt_pc.cuda()#[16,2048,3]
                 png = view.cuda()
+                depth = depth.cuda()
+                print('png shape: ', png.shape, 'depth shape: ', depth.shape)
+                png = torch.cat([png, depth], dim=1)  # Concatenate along channel dimension to get 4 channels
                 partial = farthest_point_sample(partial,cfg.DATASETS.SHAPENET.N_POINTS)
                 gt = farthest_point_sample(gt,cfg.DATASETS.SHAPENET.N_POINTS)
-                      
+                
                 recon,style_loss=model(partial,png)
                 cd = chamfer_sqrt(recon,gt)
                 loss_total=cd+style_loss*1e-2

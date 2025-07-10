@@ -273,7 +273,7 @@ class ViPCDataLoader(Dataset):
         self.imcomplete_path = os.path.join(data_path,'ShapeNet-ViPC-Partial')
         self.gt_path = os.path.join(data_path,'ShapeNet-ViPC-GT')
         self.rendering_path = os.path.join(data_path,'ShapeNet-ViPC-View')
-
+        self.depth_path = os.path.join(data_path,'ShapeNet-ViPC-depth')
         # Filter the list based on the selected category
         for key in filelist:
             key = key.strip()
@@ -310,12 +310,13 @@ class ViPCDataLoader(Dataset):
         pc_part_path = os.path.join(self.imcomplete_path, category_id, object_id, view_id + '.dat')
         pc_path = os.path.join(self.gt_path, category_id, object_id, view_id + '.dat')
         view_path = os.path.join(self.rendering_path, category_id, object_id, 'rendering', view_id + '.png')
-        
+        depth_path = os.path.join(self.depth_path, category_id, object_id, 'rendering', view_id + '.png')
         # Use try-except to gracefully handle missing files
         try:
             views = self.transform(Image.open(view_path))
             views = views[:3,:,:]
             
+            depth = self.transform(Image.open(depth_path))
             with open(pc_path, 'rb') as f:
                 pc = pickle.load(f).astype(np.float32)
             
@@ -361,7 +362,7 @@ class ViPCDataLoader(Dataset):
         pc_part = pc_part - gt_mean
         pc_part = pc_part / pc_L_max
 
-        return views.float(), torch.from_numpy(pc).float(), torch.from_numpy(pc_part).float()
+        return views.float(), torch.from_numpy(pc).float(), torch.from_numpy(pc_part).float(), depth.float()
 
     def __len__(self):
         return len(self.key)

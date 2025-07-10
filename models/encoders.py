@@ -31,7 +31,7 @@ def gram_matrix(tensor):
 class img_tokenizer(nn.Module):
     def __init__(self, img_size=224, 
                  patch_size=16, 
-                 in_chans=3, 
+                 in_chans=4, 
                  embed_dim=768,
                  norm_layer=None, 
                  flatten=True, 
