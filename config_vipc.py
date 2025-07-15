@@ -55,13 +55,13 @@ __C.TRAIN.WARMUP_STEPS                           = 1
 __C.TRAIN.GAMMA                                  = 0.7
 __C.TRAIN.BETAS                                  = (.9, .999)
 __C.TRAIN.WEIGHT_DECAY                           = 0
-__C.TRAIN.CATE                                   = 'lamp'
+__C.TRAIN.CATE                                   = 'all'
 __C.TRAIN.d_size                                 = 1
 #
 # Test
 #
 __C.TEST                                         = edict()
 __C.TEST.METRIC_NAME                             = 'ChamferDistance'
-__C.TEST.CATE                                    = 'lamp'
+__C.TEST.CATE                                    = 'all'
 __C.TEST.BATCH_SIZE                              = 64
-#__C.CONST.WEIGHTS = os.path.join('/home/kshitij/kshitij/egiinet_dino','checkpoints/all-eight-ckpt-best.pth') #path to pre-trained checkpoints
+#__C.CONST.WEIGHTS = #os.path.join('/home/kshitij/kshitij/egiinet_dino','checkpoints/all-eight-ckpt-best.pth') #path to pre-trained checkpoints

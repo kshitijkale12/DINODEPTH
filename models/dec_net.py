@@ -231,7 +231,7 @@ class Decoder_Network(nn.Module):
             _x_1 = self.pointgen[i](self.featmap[i](x_feat)) 
             x_1 = torch.cat((x_1, _x_1), dim=1) 
             x_branch.append(_x_1)
-
+        print('x_1 shape: ', x_1.shape, 'x_partial shape: ', x_partial.shape)
         x_coarse = torch.cat((x_1, x_partial), dim=1)
 
         return x_coarse

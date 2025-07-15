@@ -31,7 +31,7 @@ def train_net(cfg):
         # Set the wandb entity where your project will be logged (generally your team name).
         entity="kshitijkale1212",
         # Set the wandb project where this run will be logged.
-        project="egiinet_clean",
+        project="final",
         # Track hyperparameters and run metadata.
         config={
             "learning_rate": 0.02,
@@ -41,7 +41,7 @@ def train_net(cfg):
         },
     )
 
-    ViPC_train = ViPCDataLoader(os.path.join(dino_path,'fummy.txt'),
+    ViPC_train = ViPCDataLoader(os.path.join(dino_path,'train_list.txt'),
                                  data_path=cfg.DATASETS.SHAPENET.VIPC_PATH, status='train',
                                 category=cfg.TRAIN.CATE)
     train_data_loader = DataLoader(ViPC_train,
@@ -51,15 +51,14 @@ def train_net(cfg):
                               drop_last=True,
                               prefetch_factor=cfg.CONST.DATA_perfetch)
 
-    # ViPC_test = ViPCDataLoader(os.path.join(dino_path,'test_list.txt'),
-    #                             data_path=cfg.DATASETS.SHAPENET.VIPC_PATH, status='test',
-    #                             view_align=False, category=cfg.TRAIN.CATE)
-    # val_data_loader = DataLoader(ViPC_test,
-    #                                batch_size=cfg.TRAIN.BATCH_SIZE,
-    #                                num_workers=cfg.CONST.NUM_WORKERS,
-    #                                shuffle=True,
-    #                                drop_last=True,
-    #                                prefetch_factor=cfg.CONST.DATA_perfetch)
+    ViPC_test = ViPCDataLoader(os.path.join(dino_path,'test_list.txt'),
+                                data_path=cfg.DATASETS.SHAPENET.VIPC_PATH, status='test', category=cfg.TRAIN.CATE)
+    val_data_loader = DataLoader(ViPC_test,
+                                   batch_size=cfg.TRAIN.BATCH_SIZE,
+                                   num_workers=cfg.CONST.NUM_WORKERS,
+                                   shuffle=True,
+                                   drop_last=True,
+                                   prefetch_factor=cfg.CONST.DATA_perfetch)
 
     # Set up folders for logs and checkpoints
     output_dir = os.path.join(cfg.DIR.OUT_PATH, cfg.TRAIN.CATE, '%s', datetime.now().strftime('%y-%m-%d-%H-%M-%S'))
@@ -124,12 +123,12 @@ def train_net(cfg):
                 gt = gt_pc.cuda()#[16,2048,3]
                 png = view.cuda()
                 depth = depth.cuda()
-                print('png shape: ', png.shape, 'depth shape: ', depth.shape)
-                png = torch.cat([png, depth], dim=1)  # Concatenate along channel dimension to get 4 channels
+                #print('png shape: ', png.shape, 'depth shape: ', depth.shape)
+                #png = torch.cat([png, depth], dim=1)  # Concatenate along channel dimension to get 4 channels
                 partial = farthest_point_sample(partial,cfg.DATASETS.SHAPENET.N_POINTS)
                 gt = farthest_point_sample(gt,cfg.DATASETS.SHAPENET.N_POINTS)
                 
-                recon,style_loss=model(partial,png)
+                recon,style_loss=model(partial,png,depth)
                 cd = chamfer_sqrt(recon,gt)
                 loss_total=cd+style_loss*1e-2
                 optimizer.zero_grad()
@@ -168,7 +167,8 @@ def train_net(cfg):
         run.log({"avg_cdc":avg_cdc,"avg_style":avg_style,"avg_loss":avg_loss,"epoch":epoch_idx,"learning_rate":optimizer.param_groups[0]['lr']})
         
         # # Validate the current model
-        # cd_eval = test_net(cfg, epoch_idx, val_data_loader, val_writer, model)
+        cd_eval = test_net(cfg, epoch_idx, val_data_loader, val_writer, model)
+        run.log({"cd_eval":cd_eval,"epoch":epoch_idx,"learning_rate":optimizer.param_groups[0]['lr']})
         # Save checkpoints
         if epoch_idx % cfg.TRAIN.SAVE_FREQ == 0:
             file_name = 'ckpt-epoch-%03d.pth' % epoch_idx
@@ -180,7 +180,7 @@ def train_net(cfg):
             
             hub_uploader.upload_checkpoint_folder(
                 local_dir=cfg.DIR.CHECKPOINTS, 
-                repo_id="kshitij121212/shapenet_clean"
+                repo_id="kshitij121212/final"
                 )
             # artifact = wandb.Artifact(f"checkpoint-epoch-{epoch_idx:03d}", type="model")
             # artifact.add_file(output_path)

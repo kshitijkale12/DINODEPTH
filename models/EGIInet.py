@@ -29,8 +29,8 @@ class EGIInet(Module):
                                                )
         self.decoder=Decoder_Network(K1=embed_dim,K2=embed_dim,N=embed_dim)
 
-    def forward(self,pc,img):
-        feature, _, _, style_loss = self.encoder(pc=pc, im=img)
+    def forward(self,pc,img,depth):
+        feature, _, _, style_loss = self.encoder(pc=pc, im=img,depth = depth)
         final = self.decoder(feature, pc)
         return final,style_loss
 

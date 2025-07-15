@@ -23,10 +23,9 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, model=N
     if test_data_loader is None:
         # Set up data loader
 
-        ViPC_test = ViPCDataLoader(os.path.join(dino_path,'test_list.txt'),
+        ViPC_test = ViPCDataLoader(os.path.join(dino_path,'sampled_20k.txt'),
                                    data_path=cfg.DATASETS.SHAPENET.VIPC_PATH,
-                                   status='test',
-                                   view_align=False, category=cfg.TEST.CATE)
+                                   status='test', category=cfg.TEST.CATE)
         test_data_loader = DataLoader(ViPC_test,
                                      batch_size=cfg.TEST.BATCH_SIZE,
                                      num_workers=cfg.CONST.NUM_WORKERS,
@@ -55,16 +54,17 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, model=N
 
     # Testing loop
     with tqdm(test_data_loader) as t:
-        for model_idx, (view,gt_pc,part_pc) in enumerate(t):
+        for model_idx, (view,gt_pc,part_pc,depth) in enumerate(t):
 
             with torch.no_grad():
 
                 partial = part_pc.cuda()  # [16,2048,3]
                 gt = gt_pc.cuda()  # [16,2048,3]
                 png = view.cuda()
+                depth = depth.cuda()
                 partial = farthest_point_sample(partial,cfg.DATASETS.SHAPENET.N_POINTS)
                 gt = farthest_point_sample(gt,cfg.DATASETS.SHAPENET.N_POINTS)
-
+                png = torch.cat([png, depth], dim=1)  # Concatenate along channel dimension to get 4 channels
                 model.eval()
               
                 pcds_pred,_ = model(partial, png)

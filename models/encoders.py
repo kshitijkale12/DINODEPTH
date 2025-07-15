@@ -31,7 +31,7 @@ def gram_matrix(tensor):
 class img_tokenizer(nn.Module):
     def __init__(self, img_size=224, 
                  patch_size=16, 
-                 in_chans=4, 
+                 in_chans=1, 
                  embed_dim=768,
                  norm_layer=None, 
                  flatten=True, 
@@ -186,6 +186,16 @@ class transfer_loss_shared_encoder(nn.Module):
         super().__init__()
         from timm.models.vision_transformer import Block
         self.im_to_token=img_tokenizer(patch_size=img_patch_size,embed_dim=embed_dim)
+
+        print("LOADING DINO V2")
+        self.dinov2 =torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14')
+        self.dinov2.head = nn.Identity()
+        for param in self.dinov2.parameters():
+            param.requires_grad = False
+        dino_feat_dim = self.dinov2.embed_dim
+        self.dino_proj = nn.Linear(dino_feat_dim, embed_dim)
+        self.fusion_proj = nn.Linear(embed_dim*2, embed_dim)
+
         self.pc_to_token=pc_tokenizer(sample_ratio=sample_ratio,scale=scale,embed_dim=pc_h_hidden_dim)
         self.embed_dim=embed_dim
         self.fuse_layer_num=fuse_layer_num
@@ -206,20 +216,28 @@ class transfer_loss_shared_encoder(nn.Module):
 
         self.depth=depth
         self.pc_norm = create_norm(norm_args, self.embed_dim)
-
         self.im_norm = create_norm(norm_args, self.embed_dim)
+
         self.proj = nn.Linear(self.pc_to_token.out_channels, self.embed_dim)
         self.pc_pos_embed = nn.Sequential(
             create_linearblock(3, 128, norm_args=None, act_args=act_args),
             nn.Linear(128, self.embed_dim)
         )
 
-    def forward(self,pc,im):
+    def forward(self,pc,im,depth):
         B=pc.size(0)
         p_list,x_list=self.pc_to_token(pc,pc.transpose(1,2).contiguous())
 
         cent_p,pc_f=p_list[-1],self.proj(x_list[-1].transpose(1, 2))
-        im_f,_,_=self.im_to_token(im)
+        im_f,_,_=self.im_to_token(depth)
+
+        
+        self.dinov2.eval()
+        dino_output = self.dinov2.forward_features(im)
+        dino_img_f = self.dino_proj(dino_output['x_norm_patchtokens'])
+        concatenated_img_f = torch.cat([im_f, dino_img_f], dim=-1)
+        fused_im_f = self.fusion_proj(concatenated_img_f)
+        im_f = fused_im_f
 
         pc_pos_emd = self.pc_pos_embed(cent_p)
 
