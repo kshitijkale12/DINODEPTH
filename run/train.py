@@ -78,15 +78,15 @@ def train_net(cfg):
         model = torch.nn.DataParallel(model).cuda()
     
     # Create the optimizers
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+    optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()),
                                  lr=cfg.TRAIN.LEARNING_RATE,
                                  weight_decay=cfg.TRAIN.WEIGHT_DECAY,
                                  betas=cfg.TRAIN.BETAS)
 
     # lr scheduler
-    scheduler_steplr = MultiStepLR(optimizer,milestones=cfg.TRAIN.LR_DECAY_STEP, gamma=cfg.TRAIN.GAMMA)
+    scheduler_cosine = CosineAnnealingLR(optimizer, T_max=total_epochs, eta_min=0.001)
     lr_scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=cfg.TRAIN.WARMUP_STEPS,
-                                          after_scheduler=scheduler_steplr)
+                                          after_scheduler=scheduler_cosine)
 
     init_epoch = 0
     best_metrics = float('inf')
@@ -99,7 +99,7 @@ def train_net(cfg):
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         steps = cfg.TRAIN.WARMUP_STEPS+1
-        lr_scheduler = MultiStepLR(optimizer,milestones=cfg.TRAIN.LR_DECAY_STEP, gamma=cfg.TRAIN.GAMMA)
+        lr_scheduler = CosineAnnealingLR(optimizer, T_max=total_epochs, eta_min=0.001)
         optimizer.param_groups[0]['lr']= cfg.TRAIN.LEARNING_RATE
         logging.info('Recover complete.')
 
