@@ -301,6 +301,7 @@ class transfer_loss_shared_encoder(nn.Module):
         im_f_list = []
         
         pc_f = pc_f + pc_pos_emd
+        
         for i in range(self.depth):
             pc_f = self.blocks[i](pc_f)
             im_f = self.blocks[i](im_f)

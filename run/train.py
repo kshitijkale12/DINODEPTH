@@ -13,8 +13,7 @@ from run.test import test_net
 from utils.ViPCdataloader import ViPCDataLoader
 from utils.average_meter import AverageMeter
 from utils.loss_utils import *
-from utils.schedular import GradualWarmupScheduler
-from torch.optim.lr_scheduler import *
+from torch.optim.lr_scheduler import CosineAnnealingLR
 import os
 import sys
 from dotenv import load_dotenv
@@ -83,14 +82,12 @@ def train_net(cfg):
                                  weight_decay=cfg.TRAIN.WEIGHT_DECAY,
                                  betas=cfg.TRAIN.BETAS)
 
-    # lr scheduler
-    scheduler_cosine = CosineAnnealingLR(optimizer, T_max=total_epochs, eta_min=0.001)
-    lr_scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=cfg.TRAIN.WARMUP_STEPS,
-                                          after_scheduler=scheduler_cosine)
+    # lr scheduler - Using only CosineAnnealingLR without warmup
+    total_epochs = cfg.TRAIN.N_EPOCHS
+    lr_scheduler = CosineAnnealingLR(optimizer, T_max=total_epochs, eta_min=1e-5)
 
     init_epoch = 0
     best_metrics = float('inf')
-    steps = 0
     BestEpoch = 0
 
     if 'WEIGHTS' in cfg.CONST:
@@ -98,13 +95,15 @@ def train_net(cfg):
         checkpoint = torch.load(cfg.CONST.WEIGHTS)
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        steps = cfg.TRAIN.WARMUP_STEPS+1
-        lr_scheduler = CosineAnnealingLR(optimizer, T_max=total_epochs, eta_min=0.001)
-        optimizer.param_groups[0]['lr']= cfg.TRAIN.LEARNING_RATE
-        logging.info('Recover complete.')
+        # Load the scheduler's state to resume correctly
+        if 'scheduler' in checkpoint:
+             lr_scheduler.load_state_dict(checkpoint['scheduler'])
+        if 'epoch' in checkpoint:
+            init_epoch = checkpoint['epoch']
+        logging.info('Recover complete. Resuming from Epoch %d.' % (init_epoch + 1))
 
     print('recon_points: ',cfg.DATASETS.SHAPENET.N_POINTS, 'Parameters: ', sum(p.numel() for p in model.parameters()))
-    #exit()
+    
     # Training/Testing the network
     for epoch_idx in range(init_epoch + 1, cfg.TRAIN.N_EPOCHS + 1):
 
@@ -123,8 +122,7 @@ def train_net(cfg):
                 gt = gt_pc.cuda()#[16,2048,3]
                 png = view.cuda()
                 depth = depth.cuda()
-                #print('png shape: ', png.shape, 'depth shape: ', depth.shape)
-                #png = torch.cat([png, depth], dim=1)  # Concatenate along channel dimension to get 4 channels
+                
                 partial = farthest_point_sample(partial,cfg.DATASETS.SHAPENET.N_POINTS)
                 gt = farthest_point_sample(gt,cfg.DATASETS.SHAPENET.N_POINTS)
                 
@@ -148,15 +146,15 @@ def train_net(cfg):
                 t.set_description(
                     '[Epoch %d/%d][Batch %d/%d]' % (epoch_idx, cfg.TRAIN.N_EPOCHS, batch_idx + 1, n_batches))
                 t.set_postfix(loss='%s' % ['%.4f' % l for l in [cd_pc_item, style_item, loss_item]])
-                if steps <= cfg.TRAIN.WARMUP_STEPS:
-                    lr_scheduler.step()
-                    steps += 1
+                run.log({"cdc":cd_pc_item,"style":style_item,"loss":loss_item,"epoch":epoch_idx,"learning_rate":optimizer.param_groups[0]['lr']})
 
         avg_cdc = total_cd_pc / n_batches
         avg_style = total_style / n_batches
         avg_loss = total_loss / n_batches
 
+        # Step the scheduler ONCE per epoch AFTER the training loop
         lr_scheduler.step()
+        
         train_writer.add_scalar('Loss/Epoch/cd_pc', avg_cdc, epoch_idx)
         train_writer.add_scalar('Loss/Epoch/style', avg_style, epoch_idx)
         train_writer.add_scalar('Loss/Epoch/loss', avg_loss, epoch_idx)
@@ -169,29 +167,37 @@ def train_net(cfg):
         # # Validate the current model
         cd_eval = test_net(cfg, epoch_idx, val_data_loader, val_writer, model)
         run.log({"cd_eval":cd_eval,"epoch":epoch_idx,"learning_rate":optimizer.param_groups[0]['lr']})
+        
         # Save checkpoints
         if epoch_idx % cfg.TRAIN.SAVE_FREQ == 0:
             file_name = 'ckpt-epoch-%03d.pth' % epoch_idx
             output_path = os.path.join(cfg.DIR.CHECKPOINTS, file_name)
+            # Save scheduler state and epoch for proper resuming
             torch.save({
+                'epoch': epoch_idx,
                 'model': model.state_dict(),
-                'optimizer': optimizer.state_dict()
+                'optimizer': optimizer.state_dict(),
+                'scheduler': lr_scheduler.state_dict()
             }, output_path)
             
-            hub_uploader.upload_checkpoint_folder(
-                local_dir=cfg.DIR.CHECKPOINTS, 
-                repo_id="kshitij121212/final"
-                )
-            # artifact = wandb.Artifact(f"checkpoint-epoch-{epoch_idx:03d}", type="model")
-            # artifact.add_file(output_path)
-            # wandb.log_artifact(artifact)
-
-            # hub_uploader.upload_checkpoint_folder(
-            #     local_dir=cfg.DIR.LOGS, 
-            #     repo_id="kshitij121212/shapenet_clean"
-            #     )
             logging.info('Saved checkpoint to %s ...' % output_path)
+        
+        # This logic should compare against the validation metric
+        if cd_eval < best_metrics:
+            best_metrics = cd_eval
+            BestEpoch = epoch_idx
+            # Save the best model checkpoint
+            best_file_name = 'ckpt-best.pth'
+            best_output_path = os.path.join(cfg.DIR.CHECKPOINTS, best_file_name)
+            torch.save({
+                'epoch': epoch_idx,
+                'model': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'scheduler': lr_scheduler.state_dict()
+            }, best_output_path)
+
         logging.info('Best Performance: Epoch %d -- CD %.4f' % (BestEpoch,best_metrics))
-    run.finish
+        
+    run.finish()
     train_writer.close()
     val_writer.close()
