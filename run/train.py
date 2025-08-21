@@ -30,7 +30,7 @@ def train_net(cfg):
         # Set the wandb entity where your project will be logged (generally your team name).
         entity="kshitijkale1212",
         # Set the wandb project where this run will be logged.
-        project="final",
+        project="dinoattenforpaper",
         # Track hyperparameters and run metadata.
         config={
             "learning_rate": 0.02,
@@ -40,7 +40,7 @@ def train_net(cfg):
         },
     )
 
-    ViPC_train = ViPCDataLoader(os.path.join(dino_path,'train_list.txt'),
+    ViPC_train = ViPCDataLoader(os.path.join(dino_path,'train_final.txt'),
                                  data_path=cfg.DATASETS.SHAPENET.VIPC_PATH, status='train',
                                 category=cfg.TRAIN.CATE)
     train_data_loader = DataLoader(ViPC_train,
@@ -50,7 +50,7 @@ def train_net(cfg):
                               drop_last=True,
                               prefetch_factor=cfg.CONST.DATA_perfetch)
 
-    ViPC_test = ViPCDataLoader(os.path.join(dino_path,'test_list.txt'),
+    ViPC_test = ViPCDataLoader(os.path.join(dino_path,'test_final.txt'),
                                 data_path=cfg.DATASETS.SHAPENET.VIPC_PATH, status='test', category=cfg.TRAIN.CATE)
     val_data_loader = DataLoader(ViPC_test,
                                    batch_size=cfg.TRAIN.BATCH_SIZE,

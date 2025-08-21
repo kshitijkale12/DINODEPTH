@@ -25,7 +25,7 @@ __C.CONST.DATA_perfetch                          = 8
 # Directories
 #
 __C.DIR                                          = edict()
-__C.DIR.OUT_PATH                                 = os.path.join(dino_path,'project_logs')#path to save checkpoints and logs
+__C.DIR.OUT_PATH                                 = "/media/ccbd01/K1/outputforfinal" #path to save checkpoints and logs
 __C.CONST.DEVICE                                 = '0,1'
 #
 # Network
@@ -46,9 +46,9 @@ __C.NETWORK.shared_encoder.pc_h_hidden_dim       = 192
 #
 __C.TRAIN                                        = edict()
 __C.TRAIN.BATCH_SIZE                             = 32
-__C.TRAIN.N_EPOCHS                               = 16
+__C.TRAIN.N_EPOCHS                               = 160
 __C.TRAIN.SAVE_FREQ                              = 1
-__C.TRAIN.LEARNING_RATE                          = 0.0002986
+__C.TRAIN.LEARNING_RATE                          = 0.000147
 __C.TRAIN.LR_MILESTONES                          = [16,32,48,64,80,96,112,128,144]
 __C.TRAIN.LR_DECAY_STEP                          = [16,32,48,64,80,96,112,128,144]
 __C.TRAIN.WARMUP_STEPS                           = 1
@@ -62,6 +62,6 @@ __C.TRAIN.d_size                                 = 1
 #
 __C.TEST                                         = edict()
 __C.TEST.METRIC_NAME                             = 'ChamferDistance'
-__C.TEST.CATE                                    = 'all'
+__C.TEST.CATE                                    = 'bench'
 __C.TEST.BATCH_SIZE                              = 64
-#__C.CONST.WEIGHTS = #os.path.join('/home/kshitij/kshitij/egiinet_dino','checkpoints/all-eight-ckpt-best.pth') #path to pre-trained checkpoints
+__C.CONST.WEIGHTS = "/media/ccbd01/K1/outputforfinal/all/checkpoints/25-08-18-09-46-03/ckpt-epoch-026.pth" #os.path.join('/home/kshitij/kshitij/egiinet_dino','checkpoints/all-eight-ckpt-best.pth') #path to pre-trained checkpoints

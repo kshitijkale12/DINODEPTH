@@ -243,7 +243,7 @@ class transfer_loss_shared_encoder(nn.Module):
         dino_feat_dim = self.dinov2.embed_dim
         
         # This first dino_proj is overwritten by the second one, but keeping for consistency with original code
-        self.dino_proj = nn.Linear(dino_feat_dim, embed_dim)
+        # self.dino_proj = nn.Linear(dino_feat_dim, embed_dim)
         self.fusion_proj = nn.Linear(embed_dim * 2, embed_dim)
 
         self.pc_to_token = pc_tokenizer(sample_ratio=sample_ratio, scale=scale, embed_dim=pc_h_hidden_dim)

@@ -23,7 +23,7 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, model=N
     if test_data_loader is None:
         # Set up data loader
 
-        ViPC_test = ViPCDataLoader(os.path.join(dino_path,'sampled_20k.txt'),
+        ViPC_test = ViPCDataLoader(os.path.join(dino_path,'test_list.txt'),
                                    data_path=cfg.DATASETS.SHAPENET.VIPC_PATH,
                                    status='test', category=cfg.TEST.CATE)
         test_data_loader = DataLoader(ViPC_test,
@@ -64,10 +64,10 @@ def test_net(cfg, epoch_idx=-1, test_data_loader=None, test_writer=None, model=N
                 depth = depth.cuda()
                 partial = farthest_point_sample(partial,cfg.DATASETS.SHAPENET.N_POINTS)
                 gt = farthest_point_sample(gt,cfg.DATASETS.SHAPENET.N_POINTS)
-                png = torch.cat([png, depth], dim=1)  # Concatenate along channel dimension to get 4 channels
+               # png = torch.cat([png, depth], dim=1)  # Concatenate along channel dimension to get 4 channels
                 model.eval()
               
-                pcds_pred,_ = model(partial, png)
+                pcds_pred,_ = model(partial,png,depth)
                 cdl1, cdl2, f1 = calc_cd(pcds_pred, gt, calc_f1=True)
                    
                 cdl1 = cdl1.mean().item() * 1e3
